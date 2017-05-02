@@ -1,0 +1,4 @@
+// A simple message for debugging network latency.
+message NetrawTestMessage {
+  required double send_time = 1;
+}
