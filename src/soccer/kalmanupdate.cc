@@ -30,6 +30,8 @@
 #include "messages_robocup_ssl_geometry.pb.h"
 
 using direction::Direction;
+using estimation::ExtendedKalmanFilter;
+using estimation::ImprobabilityFilter;
 using math_util::AngleMod;
 using pose_2d::Pose2Df;
 using SSLVisionProto::SSL_DetectionBall;
@@ -71,6 +73,7 @@ ssl_vision_has_data_(ssl_vision_has_data),
 direction(direction) {
   is_running_ = true;
   state_estimation_test_type = 0;
+  initialized_filters = false;
 }
 
 
@@ -126,11 +129,19 @@ void KalmanUpdate::HandleUpdate() {
         const float orientation = (yellow_ssl_robot.has_orientation())
                                     ? ((direction == Direction::POSITIVE) ?
 yellow_ssl_robot.orientation(): yellow_ssl_robot.orientation() + M_PI) : 0.0f;
-        if (!yellow_ssl_robot.has_robot_id()) {
-          LOG(FATAL) << "Read robot lacks an ID\n";
-        }
-        const int robot_id = yellow_ssl_robot.robot_id();
 
+         if (!initialized_filters) {
+           ekf = new ExtendedKalmanFilter(Pose2Df(AngleMod(orientation), x, y),
+                                          detection_frame.t_capture());
+           improb = new ImprobabilityFilter(
+             Pose2Df(AngleMod(orientation), x, y),
+             detection_frame.t_capture());
+         } else {
+           ekf->Update(Pose2Df(AngleMod(orientation), x, y),
+                       detection_frame.t_capture());
+           improb->Update(Pose2Df(AngleMod(orientation), x, y),
+                          detection_frame.t_capture());
+         }
       }
 
       // Handle blue robots.

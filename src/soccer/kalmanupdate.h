@@ -70,6 +70,11 @@ class KalmanUpdate {
   std::condition_variable* ssl_vision_has_data_cv_;
   std::atomic_bool* ssl_vision_has_data_;
 
+  estimation::ExtendedKalmanFilter* ekf;
+  estimation::ImprobabilityFilter* improb;
+
+  bool initialized_filters;
+
   const direction::Direction& direction;
 };
 }  // namespace app
