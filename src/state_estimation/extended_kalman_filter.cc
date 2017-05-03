@@ -150,9 +150,10 @@ void ExtendedKalmanFilter::Update(const Pose2Df& observed_pose,
   predicted_measurement(1) = current_state(1);
   predicted_measurement(2) = current_state(2);
 
-  logfile << predicted_measurement(0) << " ";
-  logfile << predicted_measurement(1) << " " << predicted_measurement(2) << " ";
-  logfile << observation(0) << " " << observation(1) << " " << observation(2);
+  logfile << predicted_measurement(0) << ", ";
+  logfile << predicted_measurement(1) << ", " << predicted_measurement(2);
+  logfile << ", ";
+  logfile << observation(0) << ", " << observation(1) << ", " << observation(2);
   logfile << endl;
 
   current_state += kalman_gain *

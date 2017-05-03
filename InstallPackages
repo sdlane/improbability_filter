@@ -4,5 +4,5 @@ sudo apt-get install clang g++ qtbase5-dev cmake libpopt-dev \
     protobuf-compiler libsuitesparse-dev libgoogle-glog-dev python3-numpy \
     python3-scipy python3-matplotlib python3-pip python-setuptools python-dev \
     libblas-dev liblapack-dev libopenmpi-dev build-essential\
-    libiomp-dev clang-format
+    libiomp-dev clang-format python-numpy
 
