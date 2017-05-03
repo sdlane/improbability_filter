@@ -16,15 +16,14 @@
 // Version 3 in the file COPYING that came with this distribution.
 // If not, see <http://www.gnu.org/licenses/>.
 // ========================================================================
-#include "soccer/sslvisioninputhandler.h"
+#include "src/soccer/sslvisioninputhandler.h"
 
-#include "util/colorize.h"
-#include "util/timer.h"
-#include <glog/logging.h>
+#include "src/util/colorize.h"
+#include "src/util/timer.h"
+#include "glog/logging.h"
 
 using colorize::ColorGreen;
 using net::UDPMulticastServer;
-using SSLVisionProto::SSL_WrapperPacket;
 using std::atomic_bool;
 using std::condition_variable;
 using std::endl;
@@ -34,13 +33,14 @@ using std::mutex;
 using std::string;
 using std::thread;
 using std::vector;
+using SSLVisionProto::SSL_WrapperPacket;
 
 namespace app {
 
 SSLVisionInputHandler::SSLVisionInputHandler(const string& input_udp_address,
     const int input_udp_port,
     const float loop_rate_hz,
-    vector<SSL_WrapperPacket>* ssl_vision_queue,
+    vector< SSL_WrapperPacket >* ssl_vision_queue,
     mutex* ssl_vision_read_write_mutex,
     condition_variable* ssl_vision_write_out_cv,
     atomic_bool* ssl_vision_want_read,
@@ -55,6 +55,7 @@ SSLVisionInputHandler::SSLVisionInputHandler(const string& input_udp_address,
         loop_rate_hz_(loop_rate_hz),
         ssl_vision_queue_(ssl_vision_queue),
         ssl_vision_read_write_mutex_(ssl_vision_read_write_mutex),
+        ssl_vision_write_out_cv_(ssl_vision_write_out_cv),
         ssl_vision_want_read_(ssl_vision_want_read),
         ssl_vision_read_flag_mutex_(ssl_vision_read_flag_mutex),
         ssl_vision_read_block_cv_(ssl_vision_read_block_cv),

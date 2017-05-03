@@ -16,6 +16,8 @@
 // Version 3 in the file COPYING that came with this distribution.
 // If not, see <http://www.gnu.org/licenses/>.
 // ========================================================================
+#ifndef SRC_SOCCER_SSLVISIONINPUTHANDLER_H_
+#define SRC_SOCCER_SSLVISIONINPUTHANDLER_H_
 
 #include <atomic>
 #include <condition_variable>
@@ -24,31 +26,27 @@
 #include <thread>
 #include <vector>
 
-#include "net/netraw.h"
+#include "src/net/netraw.h"
 
 #include "messages_robocup_ssl_wrapper.pb.h"
 #include "radio_protocol_wrapper.pb.h"
 
-#ifndef SRC_SOCCER_SSLVISIONINPUTHANDLER_H_
-#define SRC_SOCCER_SSLVISIONINPUTHANDLER_H_
-
 namespace app {
 class SSLVisionInputHandler {
  public:
-  SSLVisionInputHandler(
-      const std::string& input_udp_address,
-      const int input_udp_port,
-      const float loop_rate_hz,
-      std::vector<SSLVisionProto::SSL_WrapperPacket>* ssl_vision_queue,
-      std::mutex* ssl_vision_read_write_mutex,
-      std::condition_variable* ssl_vision_write_out_cv,
-      std::atomic_bool* ssl_vision_want_read,
-      std::mutex* ssl_vision_read_flag_mutex,
-      std::condition_variable* ssl_vision_read_block_cv,
-      std::mutex* ssl_vision_access_mutex,
-      std::mutex* ssl_vision_has_data_mutex,
-      std::condition_variable* ssl_vision_has_data_cv,
-      std::atomic_bool* ssl_vision_has_data);
+  SSLVisionInputHandler(const std::string& input_udp_address,
+                        const int input_udp_port,
+                        const float loop_rate_hz,
+                        std::vector<SSLVisionProto::SSL_WrapperPacket>* ssl_vision_queue,
+                        std::mutex* ssl_vision_read_write_mutex,
+                        std::condition_variable* ssl_vision_write_out_cv,
+                        std::atomic_bool* ssl_vision_want_read,
+                        std::mutex* ssl_vision_read_flag_mutex,
+                        std::condition_variable* ssl_vision_read_block_cv,
+                        std::mutex* ssl_vision_access_mutex,
+                        std::mutex* ssl_vision_has_data_mutex,
+                        std::condition_variable* ssl_vision_has_data_cv,
+                        std::atomic_bool* ssl_vision_has_data);
 
   ~SSLVisionInputHandler();
 
@@ -67,6 +65,7 @@ class SSLVisionInputHandler {
 
   std::vector<SSLVisionProto::SSL_WrapperPacket>* ssl_vision_queue_;
   std::mutex* ssl_vision_read_write_mutex_;
+  std::condition_variable* ssl_vision_write_out_cv_;
   std::atomic_bool* ssl_vision_want_read_;
   std::mutex* ssl_vision_read_flag_mutex_;
   std::condition_variable* ssl_vision_read_block_cv_;

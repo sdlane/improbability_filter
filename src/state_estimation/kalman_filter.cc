@@ -30,7 +30,7 @@ namespace estimation {
 
 KalmanFilter::KalmanFilter(const Pose2Df& observed_pose,
                            const double& timestep) :
-                           current_state(6), current_covariance(6,6) {
+                           current_state(6), current_covariance(3, 3) {
   previous_predict_time = timestep;
   previous_update_time = timestep;
 
@@ -42,9 +42,9 @@ KalmanFilter::KalmanFilter(const Pose2Df& observed_pose,
   current_state(5) = 0;
 
   current_covariance = MatrixXf::Zero(3,3);
+  current_covariance(0, 0) = 625;  // Standard deviation of 25 mm
   current_covariance(1, 1) = 625;  // Standard deviation of 25 mm
-  current_covariance(2, 2) = 625;  // Standard deviation of 25 mm
-  current_covariance(3, 3) = 0.029929;  // Standard deviation of 0.173 rad
+  current_covariance(2, 2) = 0.029929;  // Standard deviation of 0.173 rad
 }
 
 KalmanFilter::~KalmanFilter() {

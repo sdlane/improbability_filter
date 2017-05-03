@@ -20,6 +20,8 @@
 #ifndef SRC_STATE_ESTIMATION_EXTENDED_IMPROBABILITY_FILTER_H_
 #define SRC_STATE_ESTIMATION_EXTENDED_IMPROBABILITY_FILTER_H_
 
+#include <iostream>
+#include <fstream>
 #include "state_estimation/kalman_filter.h"
 #include "eigen3/Eigen/Core"
 
@@ -44,6 +46,8 @@ class ImprobabilityFilter : public KalmanFilter {
   Eigen::MatrixXf measurement_jacobian_; // Should be const
   Eigen::MatrixXf measurement_noise_jacobian_; // Should be const
   Eigen::MatrixXf measurement_covariance_; // Should be const
+
+  std::ofstream logfile;
 };
 }  // namespace estimation
 

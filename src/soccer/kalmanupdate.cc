@@ -112,6 +112,32 @@ void KalmanUpdate::HandleUpdate() {
     // Clear queues in preperation of refils.
     local_ssl_vision_queue.clear();
 
+    if (!(*ssl_vision_has_data_)) {
+      unique_lock<mutex> guard(*ssl_vision_has_data_mutex_);
+      while (!(*ssl_vision_has_data_)) {
+        ssl_vision_has_data_cv_->wait(guard);
+      }
+    }
+    *ssl_vision_want_read_ = true;
+    {
+      // Transfer from the output queue to the local queue.
+      unique_lock<mutex> guard(*ssl_vision_access_mutex_);
+
+      // Push all of the queued data into a local queue.
+      for (const SSL_WrapperPacket& output : *ssl_vision_queue_) {
+        local_ssl_vision_queue.push_back(output);
+      }
+      ssl_vision_queue_->clear();
+
+      // Reset the read flag.
+      *ssl_vision_has_data_ = false;
+      *ssl_vision_want_read_ = false;
+    }  // Lock loses scope here.
+    {
+      unique_lock<mutex> guard(*ssl_vision_read_flag_mutex_);
+      ssl_vision_read_block_cv_->notify_one();
+    }
+
     SSL_DetectionFrame detection_frame_latest;
     // Handle removing and adding new bots.
     for (const SSL_WrapperPacket& wrapper_packet : local_ssl_vision_queue) {
@@ -136,32 +162,13 @@ yellow_ssl_robot.orientation(): yellow_ssl_robot.orientation() + M_PI) : 0.0f;
            improb = new ImprobabilityFilter(
              Pose2Df(AngleMod(orientation), x, y),
              detection_frame.t_capture());
+           initialized_filters = true;
          } else {
            ekf->Update(Pose2Df(AngleMod(orientation), x, y),
                        detection_frame.t_capture());
            improb->Update(Pose2Df(AngleMod(orientation), x, y),
                           detection_frame.t_capture());
          }
-      }
-
-      // Handle blue robots.
-      for (const SSL_DetectionRobot blue_ssl_robot :
-          detection_frame.robots_blue()) {
-        const float x = (direction == Direction::POSITIVE)
-            ? blue_ssl_robot.x() : blue_ssl_robot.x() * -1;
-        const float y = (direction == Direction::POSITIVE)
-            ? blue_ssl_robot.y() : blue_ssl_robot.y() * -1;
-        const float orientation = (blue_ssl_robot.has_orientation())
-                                    ? ((direction == Direction::POSITIVE) ?
-blue_ssl_robot.orientation(): blue_ssl_robot.orientation() + M_PI) : 0.0f;
-        if (!blue_ssl_robot.has_robot_id()) {
-          LOG(FATAL) << "Read robot lacks an ID\n";
-        }
-        const int robot_id = blue_ssl_robot.robot_id();
-
-       // WorldRobot blue_world_robot(robot_id, Team::BLUE,
-       //                             Pose2Df(AngleMod(orientation), x, y),
-       //                             detection_frame.t_capture());
       }
     }
   }

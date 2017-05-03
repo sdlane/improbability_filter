@@ -45,7 +45,10 @@
 
 #include "state_estimation/extended_kalman_filter.h"
 
+#include <iostream>
+#include <fstream>
 #include <cmath>
+#include <iostream>
 #include "state_estimation/kalman_filter.h"
 #include "eigen3/Eigen/Core"
 #include "eigen3/Eigen/Dense"
@@ -57,51 +60,45 @@ using pose_2d::Pose2Df;
 using std::sqrt;
 using std::sin;
 using std::cos;
+using std::cout;
+using std::endl;
 
 namespace estimation {
 
 ExtendedKalmanFilter::ExtendedKalmanFilter(const Pose2Df& observed_pose,
                                            const double& timestep):
                                            KalmanFilter(
-                                             observed_pose, timestep),
-                                           velocity_jacobian_(6, 6),
-                                           noise_jacobian_(6, 3),
-                                           process_covariance(3, 3),
-                                           measurement_jacobian_(3, 6),
-                                           measurement_noise_jacobian_(3, 3),
-                                           measurement_covariance_(3, 3) {
+                                             observed_pose, timestep) {
   velocity_jacobian_ = MatrixXf::Zero(6, 6);
 
+  noise_jacobian_ = MatrixXf::Zero(6, 3);
   noise_jacobian_.topLeftCorner(3, 3) = MatrixXf::Zero(3, 3);
   noise_jacobian_.bottomRightCorner(3, 3) = MatrixXf::Identity(3, 3);
 
-  process_covariance = MatrixXf::Zero(3, 3);
-  process_covariance(1, 1) = 4356;  // Standard deviation of 66 mm/s
-  process_covariance(2, 2) = 4356;  // Standard deviation of 66 mm/s
-  process_covariance(3, 3) = 0.04;  // Standard deviation of 0.2 rad/s
+  process_covariance_ = MatrixXf::Zero(3, 3);
+  process_covariance_(0, 0) = 4356;  // Standard deviation of 66 mm/s
+  process_covariance_(1, 1) = 4356;  // Standard deviation of 66 mm/s
+  process_covariance_(2, 2) = 0.04;  // Standard deviation of 0.2 rad/s
 
+  measurement_jacobian_ = MatrixXf::Zero(3, 6);
   measurement_jacobian_.topLeftCorner(3, 3) = MatrixXf::Identity(3, 3);
-  measurement_jacobian_.topRightCorner(3, 3) = MatrixXf::Zero(3, 3);
+  measurement_jacobian_.bottomRightCorner(3, 3) = MatrixXf::Zero(3, 3);
 
   measurement_noise_jacobian_ = MatrixXf::Identity(3, 3);
 
   measurement_covariance_ = MatrixXf::Zero(3, 3);
+  measurement_covariance_(0, 0) = 625;  // Standard deviation of 25 mm
   measurement_covariance_(1, 1) = 625;  // Standard deviation of 25 mm
-  measurement_covariance_(2, 2) = 625;  // Standard deviation of 25 mm
-  measurement_covariance_(3, 3) = 0.029929;  // Standard deviation of 0.173 rad
+  measurement_covariance_(2, 2) = 0.029929;  // Standard deviation of 0.173 rad
 
-
+  logfile.open("./logs/ekf.log");
 }
 
 
-ExtendedKalmanFilter::~ExtendedKalmanFilter() {}
+ExtendedKalmanFilter::~ExtendedKalmanFilter() {
+  logfile.close();
+}
 
-//   B = [1 0 0 c*dt -s*dt 0,
-//        0 1 0 s*dt c*dt 0,
-//        0 0 1 0 0 dt,
-//        0 0 0 0.5 0 0,
-//        0 0 0 0 0.5 0,
-//        0 0 0 0 0 0.5]
 void ExtendedKalmanFilter::Predict(const double& timestep) {
   MatrixXf prediction_matrix(6,6);
 
@@ -110,14 +107,15 @@ void ExtendedKalmanFilter::Predict(const double& timestep) {
   const float sine = sin(theta);
   const double delta_t = timestep - previous_predict_time;
 
-  prediction_matrix.topLeftCorner(3,3) = MatrixXf::Identity(3,3);
-  prediction_matrix.bottomRightCorner(3,3) = 0.5*MatrixXf::Identity(3,3);
+  prediction_matrix = MatrixXf::Zero(6, 6);
+  prediction_matrix.topLeftCorner(3, 3) = MatrixXf::Identity(3, 3);
+  prediction_matrix.bottomRightCorner(3, 3) = 0.5*MatrixXf::Identity(3, 3);
 
-  prediction_matrix(0,3) = cosine*delta_t;
-  prediction_matrix(0,4) = -sine*delta_t;
-  prediction_matrix(1,3) = sine*delta_t;
-  prediction_matrix(1,4) = cosine*delta_t;
-  prediction_matrix(2,5) = delta_t;
+  prediction_matrix(0, 3) = cosine*delta_t;
+  prediction_matrix(0, 4) = -sine*delta_t;
+  prediction_matrix(1, 3) = sine*delta_t;
+  prediction_matrix(1, 4) = cosine*delta_t;
+  prediction_matrix(2, 5) = delta_t;
 
   CalculateJacobian(delta_t);
 
@@ -125,14 +123,14 @@ void ExtendedKalmanFilter::Predict(const double& timestep) {
 
   current_covariance =
     velocity_jacobian_*current_covariance*velocity_jacobian_.transpose() +
-    noise_jacobian_*process_covariance*noise_jacobian_.transpose();
+    noise_jacobian_*process_covariance_*noise_jacobian_.transpose();
 
   previous_predict_time = timestep;
 }
 
 void ExtendedKalmanFilter::Update(const Pose2Df& observed_pose,
                                   const double& timestep) {
-  if (timestep != previous_update_time)
+  if (timestep != previous_update_time && timestep > previous_update_time)
     Predict(timestep);
 
   VectorXf observation(3);
@@ -143,14 +141,19 @@ void ExtendedKalmanFilter::Update(const Pose2Df& observed_pose,
   MatrixXf kalman_gain(6,6);
   kalman_gain =
     current_covariance * measurement_jacobian_.transpose() *
-    (measurement_jacobian_*current_covariance*measurement_jacobian_.transpose()
+    ((measurement_jacobian_*current_covariance*measurement_jacobian_.transpose()
 +    measurement_noise_jacobian_ * measurement_covariance_ *
-    measurement_noise_jacobian_.transpose()).inverse();
+    measurement_noise_jacobian_.transpose()).inverse());
 
   VectorXf predicted_measurement(3);
   predicted_measurement(0) = current_state(0);
   predicted_measurement(1) = current_state(1);
   predicted_measurement(2) = current_state(2);
+
+  logfile << predicted_measurement(0) << " ";
+  logfile << predicted_measurement(1) << " " << predicted_measurement(2) << " ";
+  logfile << observation(0) << " " << observation(1) << " " << observation(2);
+  logfile << endl;
 
   current_state += kalman_gain *
                    (observation - predicted_measurement);
@@ -162,12 +165,6 @@ void ExtendedKalmanFilter::Update(const Pose2Df& observed_pose,
   previous_update_time = timestep;
 }
 
-//   A = [1 0 -(vr*s + vt*c)*dt c*dt -s*dt 0,
-//        0 1 (vr*c - ct*s)*dt s*delta_t c*dt 0,
-//        0 0 1 0 0 delta_t,
-//        0 0 0 0.5 0 0,
-//        0 0 0 0 0.5 0,
-//        0 0 0 0 0 0.5]
 void ExtendedKalmanFilter::CalculateJacobian(const float delta_t) {
   velocity_jacobian_ = MatrixXf::Zero(6, 6);
 

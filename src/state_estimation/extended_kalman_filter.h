@@ -20,6 +20,8 @@
 #ifndef SRC_STATE_ESTIMATION_EXTENDED_KALMAN_FILTER_H_
 #define SRC_STATE_ESTIMATION_EXTENDED_KALMAN_FILTER_H_
 
+#include <iostream>
+#include <fstream>
 #include "state_estimation/kalman_filter.h"
 #include "eigen3/Eigen/Core"
 #include "eigen3/Eigen/Dense"
@@ -42,11 +44,13 @@ observed_pose,
  private:
   Eigen::MatrixXf velocity_jacobian_;
   Eigen::MatrixXf noise_jacobian_;  // Should be const
-  Eigen::MatrixXf process_covariance; // Should be const
+  Eigen::MatrixXf process_covariance_; // Should be const
 
   Eigen::MatrixXf measurement_jacobian_; // Should be const
   Eigen::MatrixXf measurement_noise_jacobian_; // Should be const
   Eigen::MatrixXf measurement_covariance_; // Should be const
+
+  std::ofstream logfile;
 };
 }  // namespace estimation
 
